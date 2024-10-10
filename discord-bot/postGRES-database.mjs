@@ -80,4 +80,3 @@ export async function vote_tally(dbid) {
   }
   return result.rows[0].count;
 }
-
