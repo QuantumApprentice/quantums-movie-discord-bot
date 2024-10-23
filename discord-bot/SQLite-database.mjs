@@ -99,13 +99,11 @@ async function db_run(query, params)
 
 export async function get_top_five()
 {
-  const q = 'SELECT "movieID", COUNT(*) as tally FROM movie_vote \
+  const q = 'SELECT "movieID" AS "movieID", COUNT(*) as tally FROM movie_vote \
             GROUP BY "movieID";';
-  let result;
   try {
-    result = await db_all(q);
+    return await db_all(q);
     // console.log("top 5 result: ", result);
-    return result;
   } catch (error) {
     console.log("Error getting top 5: ", error);
   }
@@ -113,24 +111,20 @@ export async function get_top_five()
 
 export async function add_vote(voterID, movieID)
 {
-  const q = 'INSERT INTO movie_vote (voterID, movieID) \
-                VALUES (?, ?);';
-
-  const r = sqlite_db.prepare("INSERT OR IGNORE INTO movie_vote (voterID, movieID) VALUES (?, ?);");
+  const q = sqlite_db.prepare("INSERT OR IGNORE INTO movie_vote (voterID, movieID) VALUES (?, ?);");
   // console.log("voterID: ", voterID);
   // console.log("movieID: ", movieID);
-  try {
-    return new Promise(
-      (res,rej)=>{
-        r.run(
-          [voterID, movieID], function(err){
-            if (err) return rej(err);
-            res(!!this.changes);
-          }
-        )
-      }
-    );
-    // await db_run(q, [voterID, movieID], function (e, r){
+  return new Promise(
+    (res,rej)=>{
+      q.run(
+        [voterID, movieID], function(err) {
+          if (err) return rej(err);
+          res(!!this.changes);
+        }
+      )
+    }
+  );
+  // await db_run(q, [voterID, movieID], function (e, r){
     //   console.log("e: ", e);
     //   console.log("this: ", this);
     //   if (e.errno === 19) {
@@ -138,9 +132,6 @@ export async function add_vote(voterID, movieID)
     //     return false;
     //   }
     // });
-  } catch (error) {
-    console.log("Error while voting: ", error);
-  }
 }
 
 export async function remove_vote(movieID, voterID) {
@@ -149,7 +140,6 @@ export async function remove_vote(movieID, voterID) {
   // console.log("voterID: ", voterID);
   // console.log("movieID: ", movieID);
 
-  let result;
   try {
     return new Promise(
       (res,rej)=>{
@@ -164,7 +154,6 @@ export async function remove_vote(movieID, voterID) {
   } catch (error) {
     console.log("Error removing vote: ", error);
   }
-  return result;
 }
 
 export async function vote_tally(dbid) {
@@ -173,10 +162,10 @@ export async function vote_tally(dbid) {
   let result;
   try {
     result = await db_all(q, [dbid]);
+    // console.log("tally result: ", result);
+    return result[0].tally;
   } catch (error) {
     console.log("Error getting tally: ", error);
   }
-  // console.log("tally result: ", result);
-  return result[0].tally;
 }
 

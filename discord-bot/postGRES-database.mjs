@@ -1,12 +1,28 @@
-import pg from 'npm:pg';
+//Deno version
+// import pg from 'npm:pg';
+//Node version
+import pg from "pg";
 const { Pool, Client } = pg;
 
 // process.version.includes("node");
 // if (Deno);
-
-const connectionString = Deno?.env.get('SUPABASE_DB_URL');
+// const connectionString = Deno?.env.get('SUPABASE_DB_URL');
 // const secretPass  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const pool = new Pool({connectionString});
+// const pool = new Pool({connectionString});
+
+
+// var conString = "postgres://YourUserName:YourPassword@localhost:5432/YourDatabase";
+// var client = new pg.Client(conString);
+// client.connect();
+
+
+const pool = new Pool({
+  user: 'quantum',
+  password: process.env.POSTGRES_PASS,
+  host: 'localhost',
+  port: '5432',
+  database: 'postgres',
+});
 
 // This approach of letting you pass in the client means 
 // this "library" code can handle any of the main 4 situations: 
@@ -25,58 +41,51 @@ const pool = new Pool({connectionString});
 
 export async function get_top_five(client=pool)
 {
-  const q = 'SELECT "movieID", COUNT(*) FROM movie_vote \
-            GROUP BY "movieID";';
-  let result;
+  const q = 'SELECT movieid AS "movieID", COUNT(*) AS tally FROM movie_vote \
+            GROUP BY movieid;';
   try {
-    result = await client.query(q);
+    const result = await client.query(q);
+    // console.log("result: ", result);
+    return result.rows;
   } catch (error) {
     console.log("Error getting top 5: ", error);
   }
-  return result.rows;
 }
 
-export async function add_vote(voter, movieid, client=pool)
+export async function add_vote(userID, dbid, client=pool)
 {
-  const q = 'INSERT INTO movie_vote (voter, movieid) \
-                VALUES ($1, $2);';
+  const q = "INSERT \
+             INTO movie_vote (voterid, movieid) \
+             VALUES ($1, $2) \
+             ON CONFLICT ON CONSTRAINT movie_vote_pkey DO NOTHING;";
 
-  let result;
   try {
-    result = await client.query(q, [voter, movieid]);
+    const result = await client.query(q, [userID, dbid]);
+    // console.log("add_vote result: ", result);
+    return (!!result.rowCount);
   } catch (error) {
     console.log("Error while voting: ", error);
   }
 
-  // if (client !== pool) {
-  //   client.release();
-  // }
-
-  if (result === undefined) {
-    return false;
-  } else {
-    return true;
-  }
 }
 
-export async function remove_vote(dbid, userID) {
-  const q = 'DELETE FROM movie_vote WHERE "movieID"=$1 AND "voter"=$2;'// LIMIT 1;'
-  let result;
+export async function remove_vote(userID, dbid) {
+  const q = "DELETE FROM movie_vote WHERE voterid=$1 AND movieid=$2;"// LIMIT 1;'
   try {
-    result = await pool.query(q, [dbid, userID]);
+    const result = await pool.query(q, [userID, dbid]);
+    // console.log("add_vote result: ", result);
+    return (!!result.rowCount);
   } catch (error) {
     console.log("Error removing vote: ", error);
   }
-  return result;
 }
 
 export async function vote_tally(dbid) {
-  const q = 'SELECT COUNT(*) FROM movie_vote WHERE "movieID"=$1;'
-  let result;
+  const q = 'SELECT COUNT(*) FROM movie_vote WHERE movieid=$1;'
   try {
-    result = await pool.query(q, [dbid]);
+    const result = await pool.query(q, [dbid]);
+    return result.rows[0].count;
   } catch (error) {
     console.log("Error getting tally: ", error);
   }
-  return result.rows[0].count;
 }
