@@ -89,3 +89,14 @@ export async function vote_tally(dbid) {
     console.log("Error getting tally: ", error);
   }
 }
+
+export async function user_voted(userID, dbid) {
+  const q = 'SELECT 1 FROM movie_vote WHERE voterid=$1 AND movieid=$2;'
+  try {
+    const result = await pool.query(q, [userID, dbid]);
+    // console.log("result: ", result.rowCount);
+    return result.rowCount == 1;
+  } catch (error) {
+    console.log("Error checking if user voted for movie: ", error);
+  }
+}

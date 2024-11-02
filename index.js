@@ -29,7 +29,8 @@ import {
 } from "discord-interactions";
 import {
   discord_interact,
-  discord_command
+  discord_command,
+  discord_modal,
 } from "./discord-bot/Discord-Bot.mjs"
 
 ////https stuff, keep for reference?
@@ -83,6 +84,7 @@ Express.post('/webhook', async (req, res) => {
   const { type, } = rawBody;
 
   // console.log("rawBody: ", rawBody);
+  // console.log("type: ", type);
 
   if (type == InteractionType.PING) {
     return res.send({
@@ -90,14 +92,18 @@ Express.post('/webhook', async (req, res) => {
     })
   }
 
-  //  * Handle App Button clicks
-  if (type === InteractionType.MESSAGE_COMPONENT) {
-    res.status(200).json(await discord_interact(rawBody));
-  }
   //  * Handle slash command requests
   if (type === InteractionType.APPLICATION_COMMAND) {
     res.status(200).json(await discord_command(rawBody));
   }
+  //  * Handle App Button clicks
+  if (type === InteractionType.MESSAGE_COMPONENT) {
+    res.status(200).json(await discord_interact(rawBody));
+  }
+  if (type === InteractionType.MODAL_SUBMIT) {
+    res.status(200).json(await discord_modal(rawBody));
+  }
+
 });
 
 //for websight viewing?
