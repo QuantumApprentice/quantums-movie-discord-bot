@@ -20,6 +20,7 @@ import {
   remove_vote,
   add_vote,
   user_voted,
+  user_movies,
 } from "./postGRES-database.mjs";
 import {
   InteractionType,
@@ -199,6 +200,38 @@ export async function discord_command(rawBody)
     }
   }
 
+  if (name === "random") {
+    const new_index = Math.floor(Math.random()*listJson.length);
+    const voted = await user_voted(member.user.id, tmdbJson[new_index > -1 ? new_index : 0].id);
+    return browse_movies(
+      new_index,
+      '',
+      InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      voted,
+    );
+  }
+
+  if (name === "vote-history") {
+    const movies = await user_movies(member.user.id);
+    let output = "You voted for:\n";
+    for (const el of movies) {
+      const movie = tmdbJson?.find(m=>m.id == el.movieid);
+      const tally = await vote_tally(el.movieid);
+
+      const year = movie?.release_date?.slice(0,4);
+      output += `${movie?.title} (${year}) [${movie?.runtime_hm}] has ${tally > 0 ? "👍x"+tally : ""} total votes\n`;
+    }
+    // console.log("output: ", output);
+
+    return ({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: output,
+        flags: InteractionResponseFlags.EPHEMERAL,
+      }
+    });
+  }
+
   return ({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
@@ -215,20 +248,20 @@ export async function discord_modal(rawBody)
           token: interaction_token,
           data,
           member,
+          message,
   } = rawBody;
 
-  console.log("data: ", rawBody.data.components[0]);
 
   // console.log("data: ", data.components[0].components[0].value);
   const search_str = data.components[0].components[0].value;
-  console.log("search_str: ", search_str);
+  // console.log("search_str: ", search_str);
   let new_index;
   if (search_str) {
-    new_index  = movie_search(search_str);
+    new_index = movie_search(search_str);
   }
-  // else {
-  //   new_index = 
-  // }
+  else {
+    new_index = message.components[0].components[0].custom_id.split("-")[1];
+  }
   const voted = await user_voted(member.user.id, tmdbJson[new_index > -1 ? new_index : 0].id);
 
   if (new_index > -1) {
@@ -249,7 +282,9 @@ function search_modal(index)
   const random_movie = [
     "Star Wars", "Ninja Turtles", "Fight Club",
     "Matrix", "Lord of the Rings",
-    "Indiana Jones", "Ghostbusters"];
+    "Indiana Jones", "Ghostbusters",
+    "Friday the 13th", "Nightmare on Elm Street",
+  ];
   const random_placeholder = random_movie[Math.floor(Math.random()*random_movie.length)]
 
   return ({
@@ -545,7 +580,7 @@ async function browse_movies(movieIDX, search_str, res_type, voted)
 
   const vote_handler = !voted ? {
     type: 2,
-    label: `Add vote ${tally>0 ? "("+tally+")" : ""}👍`,
+    label: `UpVote ${tally>0 ? "("+tally+")" : ""}👍`,
     style: 1,
     custom_id: `vote-${movieIDX}`,
   } : {

@@ -100,3 +100,14 @@ export async function user_voted(userID, dbid) {
     console.log("Error checking if user voted for movie: ", error);
   }
 }
+
+export async function user_movies(userID) {
+  const q = 'SELECT * FROM movie_vote WHERE voterid=$1;'
+  try {
+    const result = await pool.query(q, [userID]);
+    // console.log("result: ", result.rows);
+    return result.rows;
+  } catch (error) {
+    console.log("Error getting user voted movies: ", error);
+  }
+}
